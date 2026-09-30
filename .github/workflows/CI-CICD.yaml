@@ -1,0 +1,57 @@
+name: CI-CiCd
+
+on:
+  # workflow_dispatch giver en "Run workflow"-knap under Actions-fanen på GitHub,
+  # så man kan starte pipelinen manuelt. Godt til debugging.
+  workflow_dispatch:
+
+  push:
+    # Kører kun ved push til master. Udelader man "branches", kører den på ALLE branches.
+    branches: ["master"]
+
+# Giver workflowet kun læseadgang til repoet (princippet om mindst mulige rettigheder).
+permissions:
+  contents: read
+
+# Variabler, der kan bruges i alle jobs og steps via ${{ env.NAVN }}
+env:
+  DOTNET_VERSION: "10.0.x"            # .x = nyeste patch-version af .NET 10.0 (fx 10.0.3)
+  SOLUTION_PATH: "CICD-Template.slnx" # Stien til solution-filen, relativt til repoets rod
+
+jobs:
+  build-and-test:                     # Jobbets ID (skal være en nøgle under jobs)
+    name: Build-and-Test              # Det navn, der vises på GitHub
+    runs-on: ubuntu-latest            # Den virtuelle maskine (runner), jobbet kører på
+
+    steps:
+      # Runneren starter tom. Checkout laver en git clone af repoet ind på maskinen.
+      - name: Get Code
+        uses: actions/checkout@v5
+
+      # Installerer .NET SDK'et i den version, vi har angivet i env.
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      # Henter alle NuGet-pakker, som projekterne afhænger af.
+      - name: Restore
+        run: dotnet restore ${{ env.SOLUTION_PATH }}
+
+      # Bygger løsningen i Release-konfiguration.
+      # --no-restore: pakkerne er allerede hentet i forrige step, så det springes over.
+      - name: Build
+        run: >-
+          dotnet build ${{ env.SOLUTION_PATH }}
+          --configuration Release
+          --no-restore
+
+      # Kører alle tests mod den Release-build, vi lige har lavet.
+      # --no-build: genbruger buildet fra forrige step i stedet for at bygge igen.
+      # --verbosity normal: viser mere output i loggen, så fejl er nemmere at finde.
+      - name: Test
+        run: >-
+          dotnet test ${{ env.SOLUTION_PATH }}
+          --configuration Release
+          --no-build
+          --verbosity normal

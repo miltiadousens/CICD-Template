@@ -37,7 +37,7 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
-          context: .                        # Mappen Docker bygger ud fra (se note nedenfor)
+          context: src                        # Mappen Docker bygger ud fra (se note nedenfor)
           file: src/CiCd/Dockerfile         # Hvor Dockerfilen ligger
           push: true                        # Push imaget efter build
           # Fuldt image-navn: ghcr.io/<ejer>/cicd-template:latest

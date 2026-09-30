@@ -1,3 +1,7 @@
+RUN apt-get update \*
+	&& apt-get install -y curl \
+	&& rm -rf /var/lib/apt/list/*'
+
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
 WORKDIR /app
 EXPOSE 8001

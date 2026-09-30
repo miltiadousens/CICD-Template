@@ -1,36 +1,44 @@
 name: CD - CICD
 
 on:
-   push:
-     branches: ["master"]
+  push:
+    branches: ["master"]   # Kører ved hvert push til master
 
 env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: "cicd-template"
-  GITHUB_ACTOR: "miltiadousens"
+  REGISTRY: ghcr.io                # GitHub Container Registry, hvor imaget bliver gemt
+  IMAGE_NAME: "cicd-template"      # Navnet på imaget (skal være med små bogstaver)
 
 jobs:
-  Build-and-Deploy-CiCd:
+  build-and-deploy:
     name: Build and Deploy CiCd
     runs-on: ubuntu-latest
+
+    # Rettigheder til den automatiske GITHUB_TOKEN:
     permissions:
-      contents: read
-      packages: write
+      contents: read     # Læse koden i repoet
+      packages: write    # Skrive (pushe) images til ghcr.io
 
     steps:
+      # Kloner repoet ind på runneren, så Docker kan se Dockerfile og kildekode
       - name: Get Code
-        uses: actions/checkout@v7
+        uses: actions/checkout@v5
 
-      - name: Log into registry ${{env.REGISTRY}}
-        uses: docker/login-action@v4
+      # Logger ind på ghcr.io, så vi har lov til at pushe imaget.
+      # github.actor = brugeren der udløste workflowet
+      # GITHUB_TOKEN laves automatisk af GitHub, du skal ikke selv oprette den
+      - name: Log into registry ${{ env.REGISTRY }}
+        uses: docker/login-action@v3
         with:
-          registry: ${{env.REGISTRY}}
-          username: ${{env.GITHUB_ACTOR}}
-          password: ${{secrets.GITHUB_TOKEN}}
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Bygger Docker-imaget ud fra Dockerfilen og pusher det til ghcr.io
       - name: Build and push Docker image
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@v6
         with:
-          content: src/CiCd #det skal ligge her, da Dockerfil ligger inde i ved siden af projektet - slnx
-          push: true
-          tags: ${{env.REGISTRY}}/${{env.GITHUB_ACTOR}}/${{env.IMAGE_NAME}}:latest
+          context: .                        # Mappen Docker bygger ud fra (se note nedenfor)
+          file: src/CiCd/Dockerfile         # Hvor Dockerfilen ligger
+          push: true                        # Push imaget efter build
+          # Fuldt image-navn: ghcr.io/<ejer>/cicd-template:latest
+          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:latest
